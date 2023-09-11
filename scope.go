@@ -35,6 +35,7 @@ func (scope *Scope) Scope(name string) *Scope {
 	if scope != nil {
 		scope.childScopes = append(scope.childScopes, child)
 	}
+	child.parentScope = scope
 	return child
 }
 
@@ -59,7 +60,19 @@ func (scope *Scope) getScope(name string) *Scope {
 			return s
 		}
 	}
-	return scope.Scope(name)
+	return nil
+}
+
+func (scope *Scope) Provide(provider IProvider, option ...Option) error {
+	var options = &Options{}
+	for _, o := range option {
+		o(options)
+	}
+	e := newEntity(provider, options)
+	if utils.IsNilPointer(e.instance) {
+		return fmt.Errorf("container.Provide: 实例必须是一个有效的指针值")
+	}
+	return scope.provide(provider, options)
 }
 
 func (scope *Scope) provide(provider IProvider, options *Options) error {
@@ -110,12 +123,11 @@ func (scope *Scope) getPopulateChan() chan *entity {
 	return popChan
 }
 
+func (scope *Scope) Populate() error {
+	return scope.populate()
+}
+
 func (scope *Scope) populate() error {
-	if scope.parentScope != nil {
-		if err := scope.parentScope.populate(); err != nil {
-			return err
-		}
-	}
 	popChan := scope.getPopulateChan()
 	for {
 		if len(popChan) == 0 {
@@ -127,11 +139,20 @@ func (scope *Scope) populate() error {
 				return err
 			}
 			if !e.isComplete() {
+				e.printEntityDependy()
 				popChan <- e
 				continue
 			}
 		default:
 			break
+		}
+	}
+
+	if len(scope.childScopes) > 0 {
+		for _, child := range scope.childScopes {
+			if err := child.populate(); err != nil {
+				return fmt.Errorf("[%s] %w", child.name, err)
+			}
 		}
 	}
 	return nil
@@ -149,6 +170,9 @@ func (scope *Scope) popEntity(e *entity) error {
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
 		field := t.Field(i)
+		if e.isDependency(field) {
+			continue
+		}
 		// 检查是否有注入标签
 		tag, ok := field.Tag.Lookup(injectTag)
 		if !ok {
@@ -160,9 +184,9 @@ func (scope *Scope) popEntity(e *entity) error {
 		if err != nil {
 			return fmt.Errorf(NotFoundEntityError, v.Type(), ft)
 		}
-		if !fe.isComplete() {
-			return fmt.Errorf(InjectionUnfinishedError, ft)
-		}
+		//if !fe.isComplete() {
+		//	return nil
+		//}
 		if !fe.v.IsValid() {
 			return fmt.Errorf(InvalidInjectionFiledError, ft, e.alias)
 		}

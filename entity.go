@@ -2,11 +2,9 @@ package injector
 
 import (
 	"context"
+	"github.com/leor-w/utils"
 	"reflect"
 	"sync"
-
-	"github.com/leor-w/kid/plugin"
-	"github.com/leor-w/kid/utils"
 )
 
 // entity 实体, 用于存储实例的信息
@@ -26,7 +24,7 @@ func newEntity(val IProvider, opts *Options) *entity {
 	e := new(entity)
 	e.alias = opts.Alias
 	e.scope = opts.Scope
-	ctx := context.WithValue(context.Background(), plugin.NameKey{}, e.alias)
+	ctx := context.WithValue(context.Background(), NameKey{}, e.alias)
 	provide := val.Provide(ctx)
 	return e.init(provide)
 }
@@ -65,6 +63,16 @@ func (e *entity) isComplete() bool {
 	return true
 }
 
+func (e *entity) printEntityDependy() {
+	for k, v := range e.dependOn {
+		if v {
+			println(k, "已完成依赖")
+		} else {
+			println(k, "尚未完成依赖")
+		}
+	}
+}
+
 // setDependency 设置依赖
 func (e *entity) setDependency(field reflect.StructField) {
 	fn := getFiledName(field)
@@ -73,6 +81,19 @@ func (e *entity) setDependency(field reflect.StructField) {
 		e.dependOn[fn] = true
 	}
 	e.Unlock()
+}
+
+func (e *entity) isDependency(field reflect.StructField) bool {
+	fn := getFiledName(field)
+	e.RLock()
+	defer e.RUnlock()
+	if depend, exist := e.dependOn[fn]; exist {
+		if depend {
+			return true
+		}
+		return false
+	}
+	return false
 }
 
 // getFiledName 获取字段的名称

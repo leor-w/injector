@@ -2,9 +2,8 @@ package injector
 
 import (
 	"fmt"
+	"github.com/leor-w/utils"
 	"reflect"
-
-	"github.com/leor-w/kid/utils"
 )
 
 var container *Container
@@ -26,7 +25,7 @@ func Populate(opts ...Option) error {
 }
 
 type Container struct {
-	scopes *Scope // 存储所有的 Scope
+	scope *Scope // 存储所有的 Scope
 }
 
 func (container *Container) Provide(val IProvider, opts ...Option) error {
@@ -57,19 +56,26 @@ func (container *Container) Populate(opts ...Option) error {
 		o(options)
 	}
 	scope := container.Scope(options.Scope)
-	return scope.populate()
+	if err := scope.populate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (container *Container) Scope(name string) *Scope {
 	if name == "" {
-		return container.scopes
+		return container.scope
 	}
-	return container.scopes.getScope(name)
+	scope := container.scope.getScope(name)
+	if scope != nil {
+		return scope
+	}
+	return container.scope.Scope(name)
 }
 
 func New() *Container {
 	return &Container{
-		scopes: &Scope{
+		scope: &Scope{
 			buckets:     make(map[reflect.Type]*bucket),
 			childScopes: make([]*Scope, 0),
 		},
