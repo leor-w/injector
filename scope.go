@@ -180,13 +180,11 @@ func (scope *Scope) popEntity(e *entity) error {
 		}
 		// 通过注入标签获取对应类型的注入实例
 		ft := f.Type()
-		fe, err := scope.get(ft, parseTag(tag))
+		tm := parseTag(tag)
+		fe, err := scope.get(ft, tm)
 		if err != nil {
-			return fmt.Errorf(NotFoundEntityError, v.Type(), ft)
+			return fmt.Errorf(NotFoundEntityError, v.Type(), ft, tm.getScope(), tm.getAlias())
 		}
-		//if !fe.isComplete() {
-		//	return nil
-		//}
 		if !fe.v.IsValid() {
 			return fmt.Errorf(InvalidInjectionFiledError, ft, e.alias)
 		}
@@ -199,8 +197,29 @@ func (scope *Scope) popEntity(e *entity) error {
 	return nil
 }
 
+func (scope *Scope) getRecursive(t reflect.Type, tm tagMapper) (*entity, error) {
+	e, err := scope.get(t, tm)
+	if err != nil || !e.isComplete() || !e.v.IsValid() {
+		if len(scope.childScopes) <= 0 {
+			return nil, err
+		}
+		for _, child := range scope.childScopes {
+			e, err = child.getRecursive(t, tm)
+			if err != nil || e == nil || !e.isComplete() || !e.v.IsValid() {
+				continue
+			}
+			return e, nil
+		}
+	}
+	return e, nil
+}
+
 func (scope *Scope) get(t reflect.Type, it tagMapper) (*entity, error) {
-	bt, b, err := scope.tryGetBucket(t)
+	tagScope := scope
+	if it.hasScope() {
+		tagScope = scope.rootScope().getScope(it.getScope())
+	}
+	bt, b, err := tagScope.tryGetBucket(t)
 	if err != nil || b == nil {
 		// 找不到到, 检查是否标记为可选 如果是则返回 nil
 		if strings.Contains(it.getOptional(), TagOptionNotRequired) {

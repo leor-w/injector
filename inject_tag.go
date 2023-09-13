@@ -6,7 +6,7 @@ const injectTag = "inject"
 
 const (
 	tagAliasKey    = "alias"    // 别名
-	tagGroupKey    = "scope"    // 分组
+	tagScopeKey    = "scope"    // 分组
 	tagOptionalKey = "optional" // 选项
 )
 
@@ -17,6 +17,14 @@ const (
 )
 
 type tagMapper map[string]string
+
+func newTagMapper(alias, scope, optional string) tagMapper {
+	m := make(tagMapper)
+	m[tagAliasKey] = alias
+	m[tagScopeKey] = scope
+	m[tagOptionalKey] = optional
+	return m
+}
 
 // parseTag 解析 tag
 func parseTag(tag string) tagMapper {
@@ -53,8 +61,8 @@ func (t tagMapper) getAlias() string {
 	return t[tagAliasKey]
 }
 
-func (t tagMapper) getGroup() string {
-	return t[tagGroupKey]
+func (t tagMapper) getScope() string {
+	return t[tagScopeKey]
 }
 
 func (t tagMapper) getOptional() string {
@@ -65,8 +73,8 @@ func (t tagMapper) hasAlias() bool {
 	return t[tagAliasKey] != ""
 }
 
-func (t tagMapper) hasGroup() bool {
-	return t[tagGroupKey] != ""
+func (t tagMapper) hasScope() bool {
+	return t[tagScopeKey] != ""
 }
 
 func (t tagMapper) hasOptional() bool {
@@ -74,5 +82,5 @@ func (t tagMapper) hasOptional() bool {
 }
 
 func (t tagMapper) hasTag() bool {
-	return t[tagAliasKey] != "" || t[tagGroupKey] != "" || t[tagOptionalKey] != ""
+	return t[tagAliasKey] != "" || t[tagScopeKey] != "" || t[tagOptionalKey] != ""
 }
