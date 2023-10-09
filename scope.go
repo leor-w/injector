@@ -170,9 +170,9 @@ func (scope *Scope) popEntity(e *entity) error {
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
 		field := t.Field(i)
-		if e.isDependency(field) {
-			continue
-		}
+		//if e.isDependency(field) {
+		//	continue
+		//}
 		// 检查是否有注入标签
 		tag, ok := field.Tag.Lookup(injectTag)
 		if !ok {
