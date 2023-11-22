@@ -102,5 +102,9 @@ func getFiledName(filed reflect.StructField) string {
 	if len(name) > 0 {
 		return name
 	}
-	return filed.Type.Name()
+	name = filed.Type.Name()
+	if len(name) > 0 {
+		return name
+	}
+	return filed.Name
 }
