@@ -76,7 +76,6 @@ func (scope *Scope) provide(provider IProvider, options *Options) error {
 	if utils.IsNilPointer(e.instance) {
 		return fmt.Errorf("container.Provide: 实例为无效的空指针")
 	}
-	fmt.Println(fmt.Sprintf("key is: %v", e.t))
 	scope.setValue(e.t, e)
 	return nil
 }
