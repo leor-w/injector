@@ -68,10 +68,6 @@ func (scope *Scope) Provide(provider IProvider, option ...Option) error {
 	for _, o := range option {
 		o(options)
 	}
-	e := newEntity(provider, options)
-	if utils.IsNilPointer(e.instance) {
-		return fmt.Errorf("container.Provide: 实例必须是一个有效的指针值")
-	}
 	return scope.provide(provider, options)
 }
 
@@ -80,9 +76,8 @@ func (scope *Scope) provide(provider IProvider, options *Options) error {
 	if utils.IsNilPointer(e.instance) {
 		return fmt.Errorf("container.Provide: 实例为无效的空指针")
 	}
-	v := reflect.ValueOf(e.instance)
-	t := v.Type()
-	scope.setValue(t, e)
+	fmt.Println(fmt.Sprintf("key is: %v", e.t))
+	scope.setValue(e.t, e)
 	return nil
 }
 
@@ -127,6 +122,7 @@ func (scope *Scope) Populate() error {
 	return scope.populate()
 }
 
+// populate 依赖注入
 func (scope *Scope) populate() error {
 	popChan := scope.getPopulateChan()
 	for {
@@ -183,7 +179,7 @@ func (scope *Scope) popEntity(e *entity) error {
 		tm := parseTag(tag)
 		fe, err := scope.get(ft, tm)
 		if err != nil {
-			return fmt.Errorf(NotFoundEntityError, v.Type(), ft, tm.getScope(), tm.getAlias())
+			return fmt.Errorf(NotFoundEntityError, v.Type(), ft, scope.name, tm.getAlias())
 		}
 		if !fe.v.IsValid() {
 			return fmt.Errorf(InvalidInjectionFiledError, ft, e.alias)

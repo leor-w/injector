@@ -37,10 +37,6 @@ func (container *Container) Provide(val IProvider, opts ...Option) error {
 	for _, o := range opts {
 		o(options)
 	}
-	e := newEntity(val, options)
-	if utils.IsNilPointer(e.instance) {
-		return fmt.Errorf("container.Provide: 实例必须是一个有效的指针值")
-	}
 	scope := container.Scope(options.Scope)
 	return scope.provide(val, options)
 }
