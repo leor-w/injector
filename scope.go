@@ -80,7 +80,7 @@ func (scope *Scope) provide(provider IProvider, options *Options) error {
 	return nil
 }
 
-func (scope *Scope) invoke(fn interface{}, options *Options) ([]reflect.Value, error) {
+func (scope *Scope) Invoke(fn interface{}) ([]reflect.Value, error) {
 	v := reflect.ValueOf(fn)
 	if v.Kind() != reflect.Func {
 		return nil, fmt.Errorf("container.Invoke: 必须是一个函数")
