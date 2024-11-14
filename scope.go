@@ -209,15 +209,15 @@ func (scope *Scope) getRecursive(t reflect.Type, tm tagMapper) (*entity, error) 
 	return e, nil
 }
 
-func (scope *Scope) get(t reflect.Type, it tagMapper) (*entity, error) {
+func (scope *Scope) get(t reflect.Type, tag tagMapper) (*entity, error) {
 	tagScope := scope
-	if it.hasScope() {
-		tagScope = scope.rootScope().getScope(it.getScope())
+	if tag.hasScope() {
+		tagScope = scope.rootScope().getScope(tag.getScope())
 	}
-	bt, b, err := tagScope.tryGetBucket(t)
+	bt, b, err := tagScope.tryGetBucket(t, tag)
 	if err != nil || b == nil {
 		// 找不到到, 检查是否标记为可选 如果是则返回 nil
-		if strings.Contains(it.getOptional(), TagOptionNotRequired) {
+		if strings.Contains(tag.getOptional(), TagOptionNotRequired) {
 			return nil, nil
 		}
 		return nil, err
@@ -227,43 +227,50 @@ func (scope *Scope) get(t reflect.Type, it tagMapper) (*entity, error) {
 	}
 
 	// 获取对应的 entity
-	e := b.get(t, it.getAlias())
+	e := b.get(t, tag.getAlias())
 	if e == nil {
-		return nil, fmt.Errorf("未找到对应的 entity 类型为: [%v] 别名为: [%s]", t, it.getAlias())
+		return nil, fmt.Errorf("未找到对应的 entity 类型为: [%v] 别名为: [%s]", t, tag.getAlias())
 	}
 	return e, nil
 }
 
 // tryGetBucket 尝试获取对应的 bucket
-func (scope *Scope) tryGetBucket(t reflect.Type) (reflect.Type, *bucket, error) {
+func (scope *Scope) tryGetBucket(t reflect.Type, tag tagMapper) (reflect.Type, *bucket, error) {
 	// 直接找对应的 bucket
 	b, exist := scope.buckets[t]
 	if exist {
 		return t, b, nil
 	}
-	bt, b, err := scope.findAssignableBucket(t)
+	bt, b, err := scope.findAssignableBucket(t, tag)
 	if err != nil {
-		return scope.findParentScopeBucket(t)
+		return scope.findParentScopeBucket(t, tag)
 	}
 	return bt, b, nil
 }
 
 // findAssignableBucket 查找可赋值或为接口实现的 bucket
-func (scope *Scope) findAssignableBucket(t reflect.Type) (reflect.Type, *bucket, error) {
+func (scope *Scope) findAssignableBucket(t reflect.Type, tag tagMapper) (reflect.Type, *bucket, error) {
 	for k, v := range scope.buckets {
 		if k.AssignableTo(t) || t.AssignableTo(k) {
-			return k, v, nil
+			if tag != nil && len(tag.getAlias()) > 0 {
+				ve := v.get(t, tag.getAlias())
+				if ve != nil {
+					return k, v, nil
+				}
+			} else {
+				return k, v, nil
+			}
 		}
 	}
 	return nil, nil, fmt.Errorf(NotFoundBucketError, t)
 }
 
 // findParentScopeBucket 从父容器中查找可赋值或为接口实现的 bucket
-func (scope *Scope) findParentScopeBucket(t reflect.Type) (reflect.Type, *bucket, error) {
+func (scope *Scope) findParentScopeBucket(t reflect.Type, tag tagMapper) (reflect.Type, *bucket, error) {
 	if scope.parentScope == nil {
 		return nil, nil, fmt.Errorf(NotFoundBucketError, t)
 	}
-	pt, pb, _ := scope.parentScope.tryGetBucket(t)
+	pt, pb, _ := scope.parentScope.tryGetBucket(t, tag)
 	if pb != nil {
 		if pt != nil {
 			t = pt
